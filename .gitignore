@@ -1,0 +1,6 @@
+scratch
+*.swp
+*.back
+notes/
+backup/
+tmp/
