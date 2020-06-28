@@ -1,0 +1,99 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use FindBin ();
+use lib "$FindBin::RealBin/../lib";
+
+use Getopt::Long ();
+use Pod::Usage   ();
+use ACNH::Data::Tools::Config ();
+use HTTP::Tiny;
+use Time::Piece;
+use File::Slurp  ();
+use ACNH::Data::Tools::Digest::SHA ();
+
+our $VERSION = '0.001';
+
+my %opt;
+Getopt::Long::GetOptions(
+    \%opt,
+    'version' => sub { print "fetch version $VERSION\n"; exit 0 },
+    'help',
+) or Pod::Usage::pod2usage( -exitval => 1 );
+
+Pod::Usage::pod2usage( -exitval => 0 ) if ( $opt{help} );
+
+my $config = ACNH::Data::Tools::Config->get();
+
+my $http     = HTTP::Tiny->new();
+my $response = $http->request(
+    'GET',
+    $config->{urls}{xlxs},
+);
+
+unless ( $response->{success} ) {
+    die 'download: ' . $response->{reason} . "\n";
+}
+
+my $data_path        = $config->{project_dir} . '/data/xlxs/';
+my $new_xlsx_content = $response->{content};
+my $new_xlsx_file    = $data_path . 'data.xlsx.' . localtime->epoch;
+my $latest_xlsx_file = $data_path . 'data.xlsx.latest';
+
+if ( -e $latest_xlsx_file && -r $latest_xlsx_file ) {
+    my $latest_xlsx_content = File::Slurp::read_file( $latest_xlsx_file, { binmode => ':raw' } );
+
+    if ( ACNH::Data::Tools::Digest::SHA::compare( $new_xlsx_content, $latest_xlsx_content ) ) {
+        exit;
+    }
+
+    unlink $latest_xlsx_file
+        or die "unlink $latest_xlsx_file: $!";
+}
+
+File::Slurp::write_file( $new_xlsx_file, { atomic => 1, binmode => ':raw' }, $new_xlsx_content )
+    or die "write $new_xlsx_file: " . $@ . "\n";
+
+symlink( $new_xlsx_file, $latest_xlsx_file )
+    or die "symlink $latest_xlsx_file: " . $@ . "\n";
+
+exit 0;
+
+__END__
+
+=pod
+
+=head1 NAME
+
+fetch - script to get and store item data for ACNH
+
+=head1 SYNOPSIS
+
+ fetch [--version] [--help]
+
+=head1 DESCRIPTION
+
+C<fetch> is a program to download and store the authoritative xlxs
+C<Data Spreadsheet for Animal Crossing New Horizons>.
+
+=head1 OPTIONS
+
+=over
+
+=item --version
+
+Print the version.
+
+=item --help
+
+Print the help menu.
+
+=back
+
+=head1 AUTHOR
+
+Blaine Motsinger C<blaine@renderorange.com>
+
+=cut
