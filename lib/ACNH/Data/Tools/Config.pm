@@ -36,7 +36,22 @@ sub load_config {
         die "$rc is not present";
     }
 
-    return Config::Tiny->read($rc);
+    my $config = Config::Tiny->read($rc);
+
+    # verify required config sections
+    foreach my $required ( qw{ urls } ) {
+        die "config section $required is required\n"
+            unless exists $config->{$required};
+    }
+
+    # verify required url entries
+    foreach my $required ( qw{ xlxs } ) {
+        unless ( exists $config->{urls}{$required} && defined $config->{urls}{$required} ) {
+            die "config section xlxs entry $required is required\n";
+        }
+    }
+
+    return $config;
 }
 
 1;
