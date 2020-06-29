@@ -6,3 +6,4 @@ backup/
 tmp/
 .acnh-data-tools.rc
 data.xlsx*
+data.json*
