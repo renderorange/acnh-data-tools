@@ -1,0 +1,117 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use FindBin ();
+use lib "$FindBin::RealBin/../lib";
+
+use Getopt::Long ();
+use Pod::Usage   ();
+use ACNH::Data::Tools::Config ();
+use Spreadsheet::ParseXLSX ();
+use Try::Tiny;
+use JSON::Tiny;
+use File::Slurp ();
+
+our $VERSION = '0.001';
+
+my %opt = (
+    data => 'data.xlsx.latest',
+);
+Getopt::Long::GetOptions(
+    \%opt,
+    'data=s',
+    'version' => sub { print "fetch version $VERSION\n"; exit 0 },
+    'help',
+) or Pod::Usage::pod2usage( -exitval => 1 );
+
+Pod::Usage::pod2usage( -exitval => 0 ) if ( $opt{help} );
+
+my $config = ACNH::Data::Tools::Config->get();
+
+my $data_path = $config->{project_dir} . '/data/';
+my $xlsx_file = $data_path . 'xlxs/' . $opt{data};
+
+unless ( -e $xlsx_file && -r $xlsx_file ) {
+    print "open $xlsx_file: doesn't exist or cannot be read\n";
+    exit 1;
+}
+
+my $parser   = Spreadsheet::ParseXLSX->new;
+my $workbook = $parser->parse( $xlsx_file );
+
+unless ( defined $workbook ) {
+    die "parse $xlsx_file: " . $parser->error . "\n";
+}
+
+my $data = {};
+foreach my $worksheet ( $workbook->worksheets ) {
+    my $name = $worksheet->get_name;
+    next if $name eq 'Read Me';
+
+    my ( $row_min, $row_max ) = $worksheet->row_range;
+    my ( $col_min, $col_max ) = $worksheet->col_range;
+
+    my @row_map = ();
+    foreach my $col ( $col_min .. $col_max ) {
+        my $cell = $worksheet->get_cell( 0, $col );
+        push @row_map, $cell->unformatted;
+    }
+
+    $data->{$name} = [];
+    foreach my $row ( $row_min+1 .. $row_max ) {
+        my $fullrow = {};
+        foreach my $col ( $col_min .. $col_max ) {
+            my $col_name = $row_map[$col];
+            my $cell = $worksheet->get_cell( $row, $col );
+            $fullrow->{$col_name} = ( $cell ? $cell->unformatted : '' );
+        }
+        push @{$data->{$name}}, $fullrow;
+    }
+}
+
+my $json = JSON::Tiny::encode_json $data;
+my $new_json_file = $data_path . 'json/data.json';
+
+File::Slurp::write_file( $new_json_file, { atomic => 1, binmode => ':raw' }, $json )
+    or die "write $new_json_file: " . $@ . "\n";
+
+exit 0;
+
+__END__
+
+=pod
+
+=head1 NAME
+
+serialize - script to read and serialize item data for ACNH
+
+=head1 SYNOPSIS
+
+ serialize [--version] [--help]
+
+=head1 DESCRIPTION
+
+C<serialize> is a program to read and serialize the authoritative xlxs
+C<Data Spreadsheet for Animal Crossing New Horizons>.
+
+=head1 OPTIONS
+
+=over
+
+=item --version
+
+Print the version.
+
+=item --help
+
+Print the help menu.
+
+=back
+
+=head1 AUTHOR
+
+Blaine Motsinger C<blaine@renderorange.com>
+
+=cut
