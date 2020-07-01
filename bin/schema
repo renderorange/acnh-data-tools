@@ -1,0 +1,103 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use FindBin ();
+use lib "$FindBin::RealBin/../lib";
+
+use Getopt::Long  ();
+use Pod::Usage    ();
+use ACNH::Data::Tools::Config ();
+use Try::Tiny;
+use JSON::Tiny;
+use File::Slurp  ();
+use Scalar::Util ();
+
+our $VERSION = '0.001';
+
+my %opt = ();
+Getopt::Long::GetOptions(
+    \%opt,
+    'version' => sub { print "fetch version $VERSION\n"; exit 0 },
+    'help',
+) or Pod::Usage::pod2usage( -exitval => 1 );
+
+Pod::Usage::pod2usage( -exitval => 0 ) if ( $opt{help} );
+
+my $config = ACNH::Data::Tools::Config->get();
+
+my $data_path = $config->{project_dir} . '/data/';
+my $data_json_file = $data_path . 'json/data.json';
+
+unless ( -e $data_json_file && -r $data_json_file ) {
+    print "open $data_json_file: doesn't exist or cannot be read\n";
+    exit 1;
+}
+
+my $json = File::Slurp::read_file( $data_json_file )
+    or die "read $data_json_file: " . $@ . "\n";
+my $data = JSON::Tiny::decode_json $json;
+
+my $schema = {};
+foreach my $table ( keys %{$data} ) {
+    $schema->{$table} = {};
+    my $row = $data->{$table}->[0];
+    foreach my $col ( keys %{$row} ) {
+        if ( $row->{$col} eq q{} ) {
+            $schema->{$table}{$col} = 'NULL';
+        }
+        elsif ( Scalar::Util::looks_like_number( $row->{$col} ) ) {
+            $schema->{$table}{$col} = 'INTEGER';
+        }
+        else {
+            $schema->{$table}{$col} = 'TEXT';
+        }
+    }
+}
+
+my $schema_path = $config->{project_dir} . '/schema/';
+my $schema_json_file = $schema_path . 'schema.json';
+my $schema_json = JSON::Tiny::encode_json $schema;
+File::Slurp::write_file( $schema_json_file, { atomic => 1, binmode => ':raw' }, $schema_json )
+    or die "write $schema_json_file: " . $@ . "\n";
+
+exit 0;
+
+__END__
+
+=pod
+
+=head1 NAME
+
+schema - script to read and create db schemas for ACNH
+
+=head1 SYNOPSIS
+
+ schema [--version] [--help]
+
+=head1 DESCRIPTION
+
+C<schema> is a program to read and create db schemas from the ACNH data.json.
+
+C<schema> will output an agnostic version in json to C<schema/schema.json>.
+
+=head1 OPTIONS
+
+=over
+
+=item --version
+
+Print the version.
+
+=item --help
+
+Print the help menu.
+
+=back
+
+=head1 AUTHOR
+
+Blaine Motsinger C<blaine@renderorange.com>
+
+=cut
