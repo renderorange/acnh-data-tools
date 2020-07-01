@@ -46,7 +46,7 @@ if ( -e $latest_xlsx_file && -r $latest_xlsx_file ) {
     my $latest_xlsx_content = File::Slurp::read_file( $latest_xlsx_file, { binmode => ':raw' } );
 
     if ( ACNH::Data::Tools::Digest::SHA::compare( $new_xlsx_content, $latest_xlsx_content ) ) {
-        exit;
+        exit 1;
     }
 
     unlink $latest_xlsx_file
