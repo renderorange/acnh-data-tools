@@ -47,7 +47,7 @@ sub load_config {
     # verify required url entries
     foreach my $required ( qw{ xlxs } ) {
         unless ( exists $config->{urls}{$required} && defined $config->{urls}{$required} ) {
-            die "config section xlxs entry $required is required\n";
+            die "config section urls entry $required is required\n";
         }
     }
 
