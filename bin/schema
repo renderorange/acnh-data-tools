@@ -42,16 +42,45 @@ my $data = JSON::Tiny::decode_json $json;
 my $schema = {};
 foreach my $table ( keys %{$data} ) {
     $schema->{$table} = {};
-    my $row = $data->{$table}->[0];
-    foreach my $col ( keys %{$row} ) {
-        if ( $row->{$col} eq q{} ) {
-            $schema->{$table}{$col} = 'NULL';
-        }
-        elsif ( Scalar::Util::looks_like_number( $row->{$col} ) ) {
-            $schema->{$table}{$col} = 'INTEGER';
-        }
-        else {
-            $schema->{$table}{$col} = 'TEXT';
+
+    # here we need to figure out what the correct type for each col is.
+    # the values of a col aren't consistent and can contain empty string,
+    # integer, or different strings to indicate the col doesn't apply for
+    # the row.
+
+    foreach my $row ( @{$data->{$table}} ) {
+        foreach my $col ( keys %{$row} ) {
+            # skip if we're already defined.
+            if ( defined $schema->{$table}{$col} ) {
+                next;
+            }
+
+            # skip cols that are empty string, since they aren't
+            # accurate for the col definition itself.
+            if ( $row->{$col} eq q{} ) {
+                next;
+            }
+
+            # abbreviations that may be in place of values.
+            # skip those, since they will evaluate as strings
+            # which might not be accurate.
+            if ( $row->{$col} eq q{NFS} || $row->{$col} eq q{NA} ) {
+                next;
+            }
+
+            # the Image col is knowningly empty string in the downloaded
+            # xlxs file.
+            # of note, there are a couple variations of the Image col name.
+            if ( $col =~ /Image/ ) {
+                $schema->{$table}{$col} = 'TEXT';
+            }
+
+            if ( Scalar::Util::looks_like_number( $row->{$col} ) ) {
+                $schema->{$table}{$col} = 'INTEGER';
+            }
+            else {
+                $schema->{$table}{$col} = 'TEXT';
+            }
         }
     }
 }
