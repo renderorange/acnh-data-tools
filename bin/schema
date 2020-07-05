@@ -22,7 +22,7 @@ my %opt = (
 Getopt::Long::GetOptions(
     \%opt,
     'output=s',
-    'version' => sub { print "fetch version $VERSION\n"; exit 0 },
+    'version' => sub { print "schema version $VERSION\n"; exit 0 },
     'help',
 ) or Pod::Usage::pod2usage( -exitval => 1 );
 

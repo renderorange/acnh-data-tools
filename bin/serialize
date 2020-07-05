@@ -22,7 +22,7 @@ my %opt = (
 Getopt::Long::GetOptions(
     \%opt,
     'data=s',
-    'version' => sub { print "fetch version $VERSION\n"; exit 0 },
+    'version' => sub { print "serialize version $VERSION\n"; exit 0 },
     'help',
 ) or Pod::Usage::pod2usage( -exitval => 1 );
 
