@@ -50,6 +50,7 @@ foreach my $worksheet ( $workbook->worksheets ) {
     my $name = $worksheet->get_name;
     next if $name eq 'Read Me';
     next if $name eq 'Editor Read Me';
+    next if $name eq 'Unused Unique IDs';
 
     my ( $row_min, $row_max ) = $worksheet->row_range;
     my ( $col_min, $col_max ) = $worksheet->col_range;
