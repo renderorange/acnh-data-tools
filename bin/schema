@@ -16,14 +16,21 @@ use Scalar::Util ();
 
 our $VERSION = '0.001';
 
-my %opt = ();
+my %opt = (
+    output => 'json',
+);
 Getopt::Long::GetOptions(
     \%opt,
+    'output=s',
     'version' => sub { print "fetch version $VERSION\n"; exit 0 },
     'help',
 ) or Pod::Usage::pod2usage( -exitval => 1 );
 
 Pod::Usage::pod2usage( -exitval => 0 ) if ( $opt{help} );
+
+$opt{output} = lc $opt{output};
+Pod::Usage::pod2usage( -exitval => 1 )
+    unless $opt{output} =~ /^json$|^sqlite$/;
 
 my $config = ACNH::Data::Tools::Config->get();
 
@@ -86,10 +93,29 @@ foreach my $table ( keys %{$data} ) {
 }
 
 my $schema_path = $config->{project_dir} . '/schema/';
-my $schema_json_file = $schema_path . 'schema.json';
-my $schema_json = JSON::Tiny::encode_json $schema;
-File::Slurp::write_file( $schema_json_file, { atomic => 1, binmode => ':raw' }, $schema_json )
-    or die "write $schema_json_file: " . $@ . "\n";
+my $schema_file = $schema_path . 'schema.' . $opt{output};
+
+my $schema_output;
+if ( $opt{output} eq 'json' ) {
+    $schema_output = JSON::Tiny::encode_json $schema;
+}
+else {
+    foreach my $table ( sort keys %{$schema} ) {
+        $schema_output .= qq{CREATE TABLE IF NOT EXISTS "$table" (\n} .
+                          q{    id INTEGER PRIMARY KEY AUTOINCREMENT};
+
+        foreach my $col ( sort keys %{$schema->{$table}} ) {
+            $schema_output .= qq{,\n} .
+                              qq{    "$col" } . $schema->{$table}{$col};
+        }
+
+        $schema_output .= qq{\n} .
+                          qq{);\n};
+    }
+}
+
+File::Slurp::write_file( $schema_file, { atomic => 1, binmode => ':raw' }, $schema_output )
+    or die "write $schema_file: " . $@ . "\n";
 
 exit 0;
 
@@ -103,17 +129,26 @@ schema - script to read and create db schemas for ACNH
 
 =head1 SYNOPSIS
 
- schema [--version] [--help]
+ schema [--output <json|sqlite>]
+        [--version] [--help]
 
 =head1 DESCRIPTION
 
 C<schema> is a program to read and create db schemas from the ACNH data.json.
 
-C<schema> will output an agnostic version in json to C<schema/schema.json>.
+By default, C<schema> will output an agnostic version in C<json> to C<schema/schema.json>.
+
+C<schema> also supports optional output to C<sqlite>.
 
 =head1 OPTIONS
 
 =over
+
+=item --output
+
+Specify the output.
+
+Defaults to C<json>, also accepts C<sqlite>.
 
 =item --version
 
