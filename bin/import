@@ -1,0 +1,117 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use FindBin ();
+use lib "$FindBin::RealBin/../lib";
+
+use Getopt::Long ();
+use Pod::Usage   ();
+use ACNH::Data::Tools::Config ();
+use Try::Tiny;
+use JSON::Tiny;
+use File::Slurp  ();
+use DBI;
+
+our $VERSION = '0.001';
+
+my %opt = ();
+Getopt::Long::GetOptions(
+    \%opt,
+    'version' => sub { print "import version $VERSION\n"; exit 0 },
+    'help',
+) or Pod::Usage::pod2usage( -exitval => 1 );
+
+Pod::Usage::pod2usage( -exitval => 0 ) if ( $opt{help} );
+
+my $config = ACNH::Data::Tools::Config->get();
+
+my $data_path = $config->{project_dir} . '/data/';
+my $data_json_file = $data_path . 'json/data.json';
+my $data_sqlite3_file = $data_path . 'sqlite3/data.sqlite3';
+
+unless ( -e $data_json_file && -r $data_json_file ) {
+    print "open $data_json_file: doesn't exist or cannot be read\n";
+    exit 1;
+}
+
+unless ( -e $data_sqlite3_file && -w $data_sqlite3_file ) {
+    print "open $data_sqlite3_file: doesn't exist or cannot be written\n";
+    exit 1;
+}
+
+my $dbh = DBI->connect( "dbi:SQLite:dbname=$data_sqlite3_file", undef, undef,
+              { RaiseError => 1, AutoCommit => 0, sqlite_unicode => 1 } )
+              or die $DBI::errstr;
+
+my $json = File::Slurp::read_file( $data_json_file )
+    or die "read $data_json_file: " . $@ . "\n";
+my $data = JSON::Tiny::decode_json $json;
+
+my $count = 0;
+foreach my $table ( keys %{$data} ) {
+    foreach my $row ( @{$data->{$table}} ) {
+        my ( @columns, @placeholders, @bind_values );
+
+        foreach my $col ( keys %{$row} ) {
+            push @columns, qq{"$col"};
+            push @placeholders, qq{?};
+            push @bind_values, $row->{$col};
+        }
+
+        my $sql = qq{INSERT INTO "$table"} .
+                  q{ ( } . ( join ', ', @columns ) . q{ ) } .
+                  q{VALUES ( } . ( join ', ', @placeholders ) . q{ ) };
+
+        my $result = $dbh->do( $sql, undef, @bind_values );
+        $count++;
+
+        if ($count == 1000) {
+            $dbh->commit;
+            $count = 0;
+        }
+    }
+}
+
+# commit one last time to make sure we get anything left.
+$dbh->commit;
+$dbh->disconnect;
+
+exit 0;
+
+__END__
+
+=pod
+
+=head1 NAME
+
+import - script to import acnh data into sqlite3
+
+=head1 SYNOPSIS
+
+ import [--version] [--help]
+
+=head1 DESCRIPTION
+
+C<import> is a program to insert data from the ACNH data.json into sqlite3.
+
+=head1 OPTIONS
+
+=over
+
+=item --version
+
+Print the version.
+
+=item --help
+
+Print the help menu.
+
+=back
+
+=head1 AUTHOR
+
+Blaine Motsinger C<blaine@renderorange.com>
+
+=cut
