@@ -6,8 +6,8 @@ use warnings;
 use FindBin ();
 use lib "$FindBin::RealBin/../lib";
 
-use Getopt::Long  ();
-use Pod::Usage    ();
+use Getopt::Long ();
+use Pod::Usage   ();
 use ACNH::Data::Tools::Config ();
 use Try::Tiny;
 use JSON::Tiny;
@@ -57,35 +57,36 @@ foreach my $table ( keys %{$data} ) {
 
     foreach my $row ( @{$data->{$table}} ) {
         foreach my $col ( keys %{$row} ) {
-            # skip if we're already defined.
-            if ( defined $schema->{$table}{$col} ) {
+
+            # if we've already set the type to INTEGER, skip evaluating it again.
+            # using the next set of evaluations below can override the INTEGER
+            # if the last col value in the list is empty string.
+            if ( exists $schema->{$table}{$col}
+                 && $schema->{$table}{$col} eq 'INTEGER' ) {
                 next;
             }
 
-            # skip cols that are empty string, since they aren't
-            # accurate for the col definition itself.
-            if ( $row->{$col} eq q{} ) {
-                next;
-            }
-
-            # abbreviations that may be in place of values.
-            # skip those, since they will evaluate as strings
-            # which might not be accurate.
-            if ( $row->{$col} eq q{NFS} || $row->{$col} eq q{NA} ) {
-                next;
-            }
-
-            # the Image col is knowningly empty string in the downloaded
-            # xlxs file.
-            # of note, there are a couple variations of the Image col name.
-            if ( $col =~ /Image/ ) {
-                $schema->{$table}{$col} = 'TEXT';
+            if ( !exists $schema->{$table}{$col} ) {
+                # set initial type as TEXT if the value is empty string or NA.
+                # we'll correct this later if we evaluate as INTEGER.
+                if ( $row->{$col} eq q{} || $row->{$col} eq q{NA} ) {
+                    $schema->{$table}{$col} = 'TEXT';
+                    next;
+                }
+                # NFS only applies to INTEGER
+                if ( $row->{$col} eq q{NFS} ) {
+                    $schema->{$table}{$col} = 'INTEGER';
+                    next;
+                }
             }
 
             if ( Scalar::Util::looks_like_number( $row->{$col} ) ) {
                 $schema->{$table}{$col} = 'INTEGER';
+                next;
             }
-            else {
+
+            # we don't want to set TEXT for any of the following apart from the initial setting.
+            unless ( $row->{$col} eq q{} || $row->{$col} eq q{NA} || $row->{$col} eq q{NFS} ) {
                 $schema->{$table}{$col} = 'TEXT';
             }
         }
