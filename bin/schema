@@ -58,9 +58,11 @@ foreach my $table ( keys %{$data} ) {
     foreach my $row ( @{$data->{$table}} ) {
         foreach my $col ( keys %{$row} ) {
 
+            # TODO: this first evaluation may be okay to remove.
+            # it was originally added as a failsafe to ensure INTEGER was
+            # protected from being overwritten, but have since added better
+            # checking before setting TEXT.
             # if we've already set the type to INTEGER, skip evaluating it again.
-            # using the next set of evaluations below can override the INTEGER
-            # if the last col value in the list is empty string.
             if ( exists $schema->{$table}{$col}
                  && $schema->{$table}{$col} eq 'INTEGER' ) {
                 next;
