@@ -1,6 +1,6 @@
 # acnh-data-tools
 
-Tools for downloading, parsing, exporting, and importing data from the official Data Spreadsheet for Animal Crossing New Horizons.
+Tools for downloading, parsing, exporting, and importing data from the ~~official~~ Data Spreadsheet for Animal Crossing New Horizons.
 
 The latest serialized data in json is available for download at:
 https://dev.adventurehound.io/renderorange/acnh-data-tools/raw/branch/master/data/json/data.json
@@ -12,7 +12,7 @@ https://dev.adventurehound.io/renderorange/acnh-data-tools/raw/branch/master/sch
 The latest sqlite3 database is available for download at:
 https://dev.adventurehound.io/renderorange/acnh-data-tools/raw/branch/master/data/sqlite3/data.sqlite3
 
-All links are current to Animal Crossing: New Horizon version 1.3.0.
+All data is current to Animal Crossing: New Horizon version 1.3.0.
 
 ## AUTHOR
 
