@@ -12,7 +12,7 @@ https://dev.adventurehound.io/renderorange/acnh-data-tools/raw/branch/master/sch
 The latest sqlite3 database is available for download at:
 https://dev.adventurehound.io/renderorange/acnh-data-tools/raw/branch/master/data/sqlite3/data.sqlite3
 
-All data is current to Animal Crossing: New Horizon version 1.3.0.
+All data is current to Animal Crossing: New Horizon version 1.3.0 (pretty old and needs to be updated).
 
 ## AUTHOR
 
