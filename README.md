@@ -1,6 +1,6 @@
 # acnh-data-tools
 
-Tools for downloading, parsing, exporting, and importing data from the ~~official~~ Data Spreadsheet for Animal Crossing New Horizons.
+Tools for downloading, parsing, exporting, and importing data from the ~~official~~ authoritative Data Spreadsheet for Animal Crossing New Horizons.
 
 The latest serialized data in json is available for download at:
 https://dev.adventurehound.io/renderorange/acnh-data-tools/raw/branch/master/data/json/data.json
